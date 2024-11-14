@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="shippingApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Lanyah M "added Bootstrap link" -->
+</head>
+<body class="bg-dark text-white">
+<div class="container mt-5" ng-controller="ShippingController">
+    <h1 class="text-center mb-4">Shopping Cart</h1>
+    <!-- Dayon M "Updated main heading text" -->
+
+    <!-- Product Input Form -->
+    <div class="input-group mb-3">
+        <input type="text" id="productNameInput" class="form-control" placeholder="Product Name">
+        <div class="input-group-append">
+            <button id="addProductBtn" class="btn btn-primary">Add</button>
+        </div>
+    </div>
+    <!-- Lanyah M "added input-group for adding products" -->
+
+    <!-- Shopping Cart Table -->
+    <table class="table table-striped table-dark">
+        <thead>
+            <tr>
+                <th>Product ID</th>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="cartTableBody">
+            <!-- Dynamic rows will be inserted here -->
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                <td id="grandTotal">$0.00</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+    <!-- Dayon M "This displays cart items" -->
+
+    <button id="checkoutBtn" class="btn btn-success btn-block">Checkout</button>
+    <!-- Dayon M "added Checkout button" -->
+
+    <!-- Shipping Details Form -->
+    <div class="mt-5">
+        <h2>Shipping Details</h2>
+        <form id="shippingForm" class="mb-3">
+            <div class="form-group">
+                <label for="address">Address</label>
+                <input type="text" id="address" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="state">State</label>
+                <input type="text" id="state" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="zip">Zip</label>
+                <input type="text" id="zip" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="carrier">Shipping Carrier</label>
+                <select id="carrier" class="form-control">
+                    <option>FedEx</option>
+                    <option>UPS</option>
+                    <option>DHL</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="method">Shipping Method</label>
+                <select id="method" class="form-control">
+                    <option>Overnight</option>
+                    <option>2nd Day</option>
+                    <option>Ground</option>
+                </select>
+            </div>
+            <button type="button" id="submitShippingBtn" class="btn btn-primary">Submit Shipping Info</button>
+        </form>
+    </div>
+    <!-- Dayon M "added form to capture shipping details with submit button" -->
+
+    <!-- Display Submitted Shipping Details -->
+    <div class="mt-4">
+        <h2>Submitted Shipping Details</h2>
+        <pre id="displayShippingDetails" style="color: white;"></pre>
+        <!-- Dayon M "added section to display submitted shipping details" -->
+    </div>
+
+    <!-- JSON Output -->
+    <pre id="jsonOutput" class="mt-3" style="color: white;"></pre>
+    <!-- Dayon M "added JSON output section wi" -->
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+<!-- Lanyah M "added script tag for Bootstrap, jQuery, and AngularJS" -->
+
+<script>
+    let cart = []; // Dayon M "changed variable name from products to cart"
+
+    // Function to update the cart table and total
+    function updateCartTable() {
+        let cartTableBody = $("#cartTableBody");
+        cartTableBody.empty();
+        let grandTotal = 0;
+
+        cart.forEach((item, index) => {
+            let total = (item.price * item.quantity).toFixed(2);
+            grandTotal += parseFloat(total);
+
+            let row = `
+                <tr>
+                    <td>${item.productId}</td>
+                    <td>${item.productName}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td>
+                        <input type="number" class="form-control" value="${item.quantity}" min="1" data-index="${index}">
+                    </td>
+                    <td>$${total}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" data-index="${index}">Remove</button>
+                    </td>
+                </tr>
+            `;
+            cartTableBody.append(row);
+        });
+
+        $("#grandTotal").text(`$${grandTotal.toFixed(2)}`);
+        $("#jsonOutput").text(JSON.stringify(cart, null, 2)).css('color', 'white'); // Dayon M "Changed text color to white"
+    }
+
+    // Add new product to cart
+    $("#addProductBtn").click(function () {
+        let productName = $("#productNameInput").val().trim();
+        if (productName) {
+            let newProduct = {
+                productId: (cart.length + 1).toString().padStart(3, '0'), // Example: "001"
+                productName: productName,
+                price: 19.99, // Example price
+                quantity: 1
+            };
+            cart.push(newProduct);
+            updateCartTable();
+            $("#productNameInput").val("");
+        }
+    });
+
+    // Update quantity in cart
+    $(document).on("input", "input[type='number']", function () {
+        let index = $(this).data("index");
+        let newQuantity = parseInt($(this).val());
+        if (newQuantity > 0) {
+            cart[index].quantity = newQuantity;
+            updateCartTable();
+        }
+    });
+
+    // Remove product from cart
+    $(document).on("click", ".btn-danger", function () {
+        let index = $(this).data("index");
+        cart.splice(index, 1);
+        updateCartTable();
+    });
+
+    // Submit Shipping Info and Display it
+    $("#submitShippingBtn").click(function () {
+        const shippingDetails = {
+            address: $("#address").val(),
+            city: $("#city").val(),
+            state: $("#state").val(),
+            zip: $("#zip").val(),
+            carrier: $("#carrier").val(),
+            method: $("#method").val()
+        };
+
+        // Validate and display shipping info
+        if ($("#shippingForm")[0].checkValidity()) {
+            $("#displayShippingDetails").text(JSON.stringify(shippingDetails, null, 2));
+        } else {
+            alert("Please complete the shipping form.");
+        }
+    });
+
+    // Checkout and send data via AJAX
+    $("#checkoutBtn").click(function () {
+        const shippingDetails = {
+            address: $("#address").val(),
+            city: $("#city").val(),
+            state: $("#state").val(),
+            zip: $("#zip").val(),
+            carrier: $("#carrier").val(),
+            method: $("#method").val()
+        };
+
+        if ($("#shippingForm")[0].checkValidity()) {
+            const order = {
+                cart: cart,
+                shippingDetails: shippingDetails
+            };
+
+            $.ajax({
+                url: 'https://example.com/api/checkout', // Replace with actual endpoint
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(order),
+                success: function (response) {
+                    alert('Order placed successfully!');
+                },
+                error: function (error) {
+                    alert('Error placing order');
+                }
+            });
+        } else {
+            alert("Please complete the shipping form.");
+        }
+    });
+
+    // Initialize cart table
+    updateCartTable();
+</script>
+
+<style>
+    /* Dayon M */
+    body {
+        background-color: black;
+        color: white;
+        font-family: Arial, sans-serif;
+    }
+
+    h1, .btn-primary, .btn-success, .btn-danger {
+        color: white;
+    }
+
+    .btn-primary {
+        background-color: blue;
+        border: none;
+    }
+
+    .btn-success {
+        background-color: green;
+        border: none;
+    }
+
+    .btn-danger {
+        background-color: red;
+        border: none;
+    }
+</style>
+</body>
+</html>
